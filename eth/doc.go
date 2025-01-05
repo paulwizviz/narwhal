@@ -16,6 +16,13 @@
 // For a list of contributors, refer to the CONTRIBUTORS file or the
 // repository's commit history.
 
-// Package eth contains functions to with Docker SDK wrapper
-// to support container based Ethereum application development.
+// Package eth is a collection of functions that trigger Docker containerised
+// Ethereum related tools. The package includes functions to compile solidity contracts
+// and generate Go bindings.
+//
+// # Features:
+//
+// * Compiling solidity contract
+//
+// * Generating Go binding
 package eth

@@ -26,42 +26,53 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/paulwizviz/narwhal/pkg/eth"
+	"github.com/paulwizviz/narwhal/eth"
 )
 
-// Example demonstrating operation to compile Solidity contract using "ethereum/solc" image.
+// This example demonstrates the steps involved in using `ethereum/solc`` container
+// to compile solidity contracts.
+//
+// Prequisites: Ensure that ABI and Bin files exists. If not run example 1.
 
 func main() {
 
+	// STEP 1: Specify the location of ABI, Binary files and location of
+	// generated Go binding
 	pwd, err := os.Getwd()
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	solPath := filepath.Join(pwd, "testdata", "solidity")
-	solFile := "hello.sol"
-	outPath := filepath.Join(pwd, "tmp", "hello")
+	packageName := "hello"
+	localType := "HelloWorld"
+
+	abiPath := filepath.Join(pwd, "tmp", packageName)
+	outPath := filepath.Join(pwd, "tmp", "internal", packageName)
 	if _, err := os.Stat(outPath); errors.Is(err, os.ErrNotExist) {
 		if err := os.MkdirAll(outPath, 0755); err != nil {
-			log.Println("===>")
 			log.Fatal(err)
 		}
 	}
 
+	fmt.Println(abiPath)
+	fmt.Println(outPath)
+
+	// STEP 2: Instantiate an Ethereum tool
 	tool, err := eth.NewDefaultTool()
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	containerID, err := tool.CompileSolWithOverride(context.Background(), "0.8.28", "solc_container", solPath, solFile, outPath, eth.EVMVerParis)
+	// STEP 3: Generate Go binding
+	containerID, err := tool.GenGoBinding(context.Background(), "alltools-stable", "go-gen", abiPath, outPath, packageName, localType)
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	fmt.Println(containerID)
 
+	// STEP 4: Remover ABI generator container
 	if err := tool.RemoveContainerForce(context.TODO(), containerID); err != nil {
 		log.Fatal(err)
 	}
-
 }

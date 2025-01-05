@@ -26,42 +26,46 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/paulwizviz/narwhal/pkg/eth"
+	"github.com/paulwizviz/narwhal/eth"
 )
 
+// This example demonstrates the steps involved in using `ethereum/solc`` container
+// to compile solidity contracts.
+
 func main() {
+
+	// STEP 1: Specify location of solidity file and compiled artefacts
 	pwd, err := os.Getwd()
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	packageName := "hello"
-	localType := "HelloWorld"
-
-	abiPath := filepath.Join(pwd, "tmp", packageName)
-	outPath := filepath.Join(pwd, "tmp", "internal", packageName)
+	solPath := filepath.Join(pwd, "testdata", "solidity")
+	solFile := "hello.sol"
+	outPath := filepath.Join(pwd, "tmp", "hello")
 	if _, err := os.Stat(outPath); errors.Is(err, os.ErrNotExist) {
 		if err := os.MkdirAll(outPath, 0755); err != nil {
 			log.Fatal(err)
 		}
 	}
 
-	fmt.Println(abiPath)
-	fmt.Println(outPath)
-
+	// STEP 3: Instantiate Etherreum tool
 	tool, err := eth.NewDefaultTool()
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	containerID, err := tool.GenGoBinding(context.Background(), "alltools-stable", "go-gen", abiPath, outPath, packageName, localType)
+	// STEP 4: Exxecute function to compile solidity
+	containerID, err := tool.CompileSolWithOverride(context.Background(), "0.8.28", "solc_container", solPath, solFile, outPath, eth.EVMVerParis)
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	fmt.Println(containerID)
 
+	// STEP 5: Remove solidity compiler container
 	if err := tool.RemoveContainerForce(context.TODO(), containerID); err != nil {
 		log.Fatal(err)
 	}
+
 }

@@ -1,16 +1,20 @@
 # Overview
 
-`Narwhal` is an open-source Go library designed to help developers seamlessly integrate Docker technologies into their applications.
-
-The library provides high-level abstractions for Docker operations, enabling developers to leverage containers for various tasks. For instance, it can be used to compile C source code using Dockerised compiler images—among many other potential use cases.
+`Narwhal` is an open-source Go module designed to help developers seamlessly integrate container technologies into their applications.
 
 ## Project Scope
 
-This project is under development.
+The library provides high-level abstractions for container operations to perform various tasks. For instance, using container-based artifacts to compile C source code and many other potential use cases.
 
 ## Audience
 
 `Narwhal` is intended for developers with a working knowledge of Go programming and Docker operations including SDK. Developers wanting further knowledge of developing in Go using SDK, please refer to Docker's [official SDK documentation](https://docs.docker.com/reference/api/engine/sdk/) or [Learn Go Docker programming](https://github.com/paulwizviz/learn-go-docker) 
+
+## Exported Packages
+
+* [eth](./eth/doc.go)
+    * [Example 1 - Compile solidity](./internal/examples/eth/ex1/main.go)
+    * [Example 2 - Generate Go Binding](./internal/examples/eth/ex2/main.go)
 
 ## Disclaimer
 
