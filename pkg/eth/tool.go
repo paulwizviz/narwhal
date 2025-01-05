@@ -72,6 +72,14 @@ var (
 	ErrCompileSolEVMStartContainer = errors.New("unable to start container")
 )
 
+const (
+	OSLinux = "linux"
+)
+
+const (
+	ArchAMD64 = "amd64"
+)
+
 // Tool represents a client of Ethereum tool
 type Tool interface {
 	// CompileSol is a function trigger a container to compile solidity
@@ -96,17 +104,19 @@ type Tool interface {
 }
 
 type tool struct {
-	cli *dockersdk.Client
+	cli          *dockersdk.Client
+	osPlatform   string
+	archPlatform string
 }
 
 func (t tool) CompileSol(ctx context.Context, imageTag string, name string, solPath string, solFile string, outPath string, evmVer string) (string, error) {
 	image := fmt.Sprintf("%s:%s", EthereumSolcImage, imageTag)
-	return compileSol(ctx, t.cli, image, name, solPath, solFile, outPath, evmVer, false)
+	return compileSol(ctx, t.cli, image, name, t.osPlatform, t.archPlatform, solPath, solFile, outPath, evmVer, false)
 }
 
 func (t tool) CompileSolWithOverride(ctx context.Context, imageTag string, name string, solPath string, solFile string, outPath string, evmVer string) (string, error) {
 	image := fmt.Sprintf("%s:%s", EthereumSolcImage, imageTag)
-	return compileSol(ctx, t.cli, image, name, solPath, solFile, outPath, evmVer, true)
+	return compileSol(ctx, t.cli, image, name, t.osPlatform, t.archPlatform, solPath, solFile, outPath, evmVer, true)
 }
 
 func (t tool) RemoveContainer(ctx context.Context, containerID string) error {
@@ -130,6 +140,8 @@ func NewDefaultTool() (Tool, error) {
 		return nil, fmt.Errorf("%w-%v", ErrCreateClient, err)
 	}
 	return &tool{
-		cli: cli,
+		cli:          cli,
+		osPlatform:   OSLinux,
+		archPlatform: ArchAMD64,
 	}, nil
 }

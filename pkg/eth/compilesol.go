@@ -31,15 +31,15 @@ import (
 	v1 "github.com/opencontainers/image-spec/specs-go/v1"
 )
 
-func compileSol(ctx context.Context, client *dockersdk.Client, image string, name string, solPath string, solFile string, outPath string, evmVer string, override bool) (string, error) {
+func compileSol(ctx context.Context, client *dockersdk.Client, image string, name string, platformOS string, arch string, solPath string, solFile string, outPath string, evmVer string, override bool) (string, error) {
 
 	if !isEVMVerCorrect(evmVer) {
 		return "", ErrCompileSolEVMVersion
 	}
 
 	platform := &v1.Platform{
-		OS:           "linux",
-		Architecture: "amd64",
+		OS:           platformOS,
+		Architecture: arch,
 	}
 
 	var cmd []string
