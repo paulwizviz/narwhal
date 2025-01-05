@@ -26,7 +26,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/paulwizviz/narwhal/eth"
+	"github.com/paulwizviz/narwhal/pkg/eth"
 )
 
 // Example demonstrating operation to compile Solidity contract using "ethereum/solc" image.
