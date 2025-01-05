@@ -51,7 +51,8 @@ const (
 )
 
 const (
-	EthereumSolcImage = "ethereum/solc"
+	EthereumSolcImage     = "ethereum/solc"
+	EthereumGethToolImage = "ethereum/client-go"
 )
 
 // Shared operations error
@@ -96,6 +97,9 @@ type Tool interface {
 	// CompileSolWithOverride is compile solidity and override existing compile versions
 	CompileSolWithOverride(ctx context.Context, imageTag string, containerName string, solPath string, solFile string, outPath string, evmVer string) (string, error)
 
+	// GenGoBinding generates Go binding
+	GenGoBinding(ctx context.Context, imageTag string, name string, abiPath string, outPath string, pkgName string, localType string) (string, error)
+
 	// RemoveContainer remove container for a given ID
 	RemoveContainer(ctx context.Context, containerID string) error
 
@@ -117,6 +121,11 @@ func (t tool) CompileSol(ctx context.Context, imageTag string, name string, solP
 func (t tool) CompileSolWithOverride(ctx context.Context, imageTag string, name string, solPath string, solFile string, outPath string, evmVer string) (string, error) {
 	image := fmt.Sprintf("%s:%s", EthereumSolcImage, imageTag)
 	return compileSol(ctx, t.cli, image, name, t.osPlatform, t.archPlatform, solPath, solFile, outPath, evmVer, true)
+}
+
+func (t tool) GenGoBinding(ctx context.Context, imageTag string, name string, abiPath string, outPath string, pkgName string, localType string) (string, error) {
+	image := fmt.Sprintf("%s:%s", EthereumGethToolImage, imageTag)
+	return generateGoBinding(ctx, t.cli, image, name, t.osPlatform, t.archPlatform, abiPath, outPath, pkgName, localType)
 }
 
 func (t tool) RemoveContainer(ctx context.Context, containerID string) error {
