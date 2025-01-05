@@ -42,11 +42,14 @@ func compileSol(ctx context.Context, client *dockersdk.Client, image string, nam
 		Architecture: arch,
 	}
 
+	localSolFolder := "/opt/solidity"
+	localABIFolder := "/opt/abi"
+
 	var cmd []string
 	if override {
-		cmd = []string{"--abi", "--bin", fmt.Sprintf("/opt/solidity/%s", solFile), "-o", "/opt/abi", "--evm-version", evmVer, "--overwrite"}
+		cmd = []string{"--abi", "--bin", fmt.Sprintf("%s/%s", localSolFolder, solFile), "-o", localABIFolder, "--evm-version", evmVer, "--overwrite"}
 	} else {
-		cmd = []string{"--abi", "--bin", fmt.Sprintf("/opt/solidity/%s", solFile), "-o", "/opt/abi", "--evm-version", evmVer}
+		cmd = []string{"--abi", "--bin", fmt.Sprintf("%s/%s", localSolFolder, solFile), "-o", localABIFolder, "--evm-version", evmVer}
 	}
 
 	containConfig := &container.Config{
@@ -59,12 +62,12 @@ func compileSol(ctx context.Context, client *dockersdk.Client, image string, nam
 			{
 				Type:   mount.TypeBind,
 				Source: filepath.Join(solPath, solFile),
-				Target: fmt.Sprintf("/opt/solidity/%s", solFile),
+				Target: fmt.Sprintf("%s/%s", localSolFolder, solFile),
 			},
 			{
 				Type:   mount.TypeBind,
 				Source: outPath,
-				Target: "/opt/abi",
+				Target: localABIFolder,
 			},
 		},
 	}
