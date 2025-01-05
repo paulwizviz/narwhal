@@ -31,43 +31,37 @@ import (
 	v1 "github.com/opencontainers/image-spec/specs-go/v1"
 )
 
-func compileSol(ctx context.Context, client *dockersdk.Client, image string, name string, platformOS string, arch string, solPath string, solFile string, outPath string, evmVer string, override bool) (string, error) {
-
-	if !isEVMVerCorrect(evmVer) {
-		return "", ErrCompileSolEVMVersion
-	}
+func generateGoBinding(ctx context.Context, client *dockersdk.Client, image string, name string, platformOS string, arch string, abiPath string, outPath string, pkgName string, localType string) (string, error) {
 
 	platform := &v1.Platform{
 		OS:           platformOS,
 		Architecture: arch,
 	}
 
-	localSolFolder := "/opt/solidity"
 	localABIFolder := "/opt/abi"
-
-	var cmd []string
-	if override {
-		cmd = []string{"--abi", "--bin", fmt.Sprintf("%s/%s", localSolFolder, solFile), "-o", localABIFolder, "--evm-version", evmVer, "--overwrite"}
-	} else {
-		cmd = []string{"--abi", "--bin", fmt.Sprintf("%s/%s", localSolFolder, solFile), "-o", localABIFolder, "--evm-version", evmVer}
-	}
+	localBindingFolder := "/opt/binding"
 
 	containConfig := &container.Config{
 		Image: image,
-		Cmd:   cmd,
+		Cmd:   []string{"abigen", "--abi", fmt.Sprintf("%s/%s.abi", localABIFolder, localType), "--bin", fmt.Sprintf("/opt/abi/%s.bin", localType), "--pkg", pkgName, "--type", localType, "--out", fmt.Sprintf("/opt/binding/%s/%s.go", pkgName, localType)},
 	}
 
 	hostConfig := &container.HostConfig{
 		Mounts: []mount.Mount{
 			{
 				Type:   mount.TypeBind,
-				Source: filepath.Join(solPath, solFile),
-				Target: fmt.Sprintf("%s/%s", localSolFolder, solFile),
+				Source: filepath.Join(abiPath, fmt.Sprintf("%s.abi", localType)),
+				Target: fmt.Sprintf("%s/%s", localABIFolder, fmt.Sprintf("%s.abi", localType)),
+			},
+			{
+				Type:   mount.TypeBind,
+				Source: filepath.Join(abiPath, fmt.Sprintf("%s.bin", localType)),
+				Target: fmt.Sprintf("%s/%s", localABIFolder, fmt.Sprintf("%s.bin", localType)),
 			},
 			{
 				Type:   mount.TypeBind,
 				Source: outPath,
-				Target: localABIFolder,
+				Target: fmt.Sprintf("%s/%s", localBindingFolder, pkgName),
 			},
 		},
 	}
@@ -90,22 +84,4 @@ func compileSol(ctx context.Context, client *dockersdk.Client, image string, nam
 	io.Copy(os.Stdout, out)
 
 	return resp.ID, nil
-}
-
-func isEVMVerCorrect(version string) bool {
-	switch version {
-	case EVMVerFrontier,
-		EVMVerHomstead,
-		EVMVerByzantium,
-		EVMVerConstantinople,
-		EVMVerIstanbul,
-		EVMVerBerlin,
-		EVMVerLondon,
-		EVMVerShanghai,
-		EVMVerCancun,
-		EVMVerParis:
-		return true
-	default:
-		return false
-	}
 }

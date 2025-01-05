@@ -51,10 +51,12 @@ const (
 )
 
 const (
+	// EthereumSolcImage is the name Ethereum Solidity Compiler Docker image
 	EthereumSolcImage = "ethereum/solc"
+	// EthereumGethToolImage is the name of Geth tool Docker image
+	EthereumGethToolImage = "ethereum/client-go"
 )
 
-// Shared operations error
 var (
 	// ErrCreateClient represents error creating a ethtool client
 	ErrCreateClient = errors.New("unable to create client")
@@ -62,7 +64,6 @@ var (
 	ErrRemovingContainer = errors.New("unable to remove container")
 )
 
-// Compile Solidity function errors
 var (
 	// ErrCompileSolEVMVersion represent an invalid EVM version declared
 	ErrCompileSolEVMVersion = errors.New("invalid evm version")
@@ -72,41 +73,59 @@ var (
 	ErrCompileSolEVMStartContainer = errors.New("unable to start container")
 )
 
-// Tool represents a client of Ethereum tool
+const (
+	// OSLinux is the name of Docker's Linux platform
+	OSLinux = "linux"
+)
+
+const (
+	// ArchAMD64 is the name of Docker's architecture platform
+	ArchAMD64 = "amd64"
+)
+
+// Tool is a representation of Ethereum related tools
 type Tool interface {
+
 	// CompileSol is a function trigger a container to compile solidity
 	//
 	// Arguments:
-	//   imageTag        corresponsing to a solidity compiler version
-	//   containerName   a unique name of a container
-	//   solPath         path to location of solidity contracts
-	//   solFile         solidity file name
-	//   outPath         path to where the compiled artefact should be
-	//   evmVer          version of EVM as per constant value
+	//
+	//	imageTag        corresponsing to a solidity compiler version
+	//	containerName   a unique name of a container
+	//	solPath         path to location of solidity contracts
+	//	solFile         solidity file name
+	//	outPath         path to where the compiled artefact should be
+	//	evmVer          version of EVM as per constant value
 	CompileSol(ctx context.Context, imageTag string, containerName string, solPath string, solFile string, outPath string, evmVer string) (string, error)
-
 	// CompileSolWithOverride is compile solidity and override existing compile versions
 	CompileSolWithOverride(ctx context.Context, imageTag string, containerName string, solPath string, solFile string, outPath string, evmVer string) (string, error)
-
+	// GenGoBinding generates Go binding
+	GenGoBinding(ctx context.Context, imageTag string, name string, abiPath string, outPath string, pkgName string, localType string) (string, error)
 	// RemoveContainer remove container for a given ID
 	RemoveContainer(ctx context.Context, containerID string) error
-
 	// RemoveContainerForce remove container for ID with no exception
 	RemoveContainerForce(ctx context.Context, containerID string) error
 }
 
 type tool struct {
-	cli *dockersdk.Client
+	cli          *dockersdk.Client
+	osPlatform   string
+	archPlatform string
 }
 
 func (t tool) CompileSol(ctx context.Context, imageTag string, name string, solPath string, solFile string, outPath string, evmVer string) (string, error) {
 	image := fmt.Sprintf("%s:%s", EthereumSolcImage, imageTag)
-	return compileSol(ctx, t.cli, image, name, solPath, solFile, outPath, evmVer, false)
+	return compileSol(ctx, t.cli, image, name, t.osPlatform, t.archPlatform, solPath, solFile, outPath, evmVer, false)
 }
 
 func (t tool) CompileSolWithOverride(ctx context.Context, imageTag string, name string, solPath string, solFile string, outPath string, evmVer string) (string, error) {
 	image := fmt.Sprintf("%s:%s", EthereumSolcImage, imageTag)
-	return compileSol(ctx, t.cli, image, name, solPath, solFile, outPath, evmVer, true)
+	return compileSol(ctx, t.cli, image, name, t.osPlatform, t.archPlatform, solPath, solFile, outPath, evmVer, true)
+}
+
+func (t tool) GenGoBinding(ctx context.Context, imageTag string, name string, abiPath string, outPath string, pkgName string, localType string) (string, error) {
+	image := fmt.Sprintf("%s:%s", EthereumGethToolImage, imageTag)
+	return generateGoBinding(ctx, t.cli, image, name, t.osPlatform, t.archPlatform, abiPath, outPath, pkgName, localType)
 }
 
 func (t tool) RemoveContainer(ctx context.Context, containerID string) error {
@@ -123,13 +142,15 @@ func (t tool) RemoveContainerForce(ctx context.Context, containerID string) erro
 	return nil
 }
 
-// NewDefaultTool is an operation to instantiate an ethtool client with default setting
+// NewDefaultTool instantiate an Ethereum tool with default setting
 func NewDefaultTool() (Tool, error) {
 	cli, err := dockersdk.NewClientWithOpts(dockersdk.FromEnv, dockersdk.WithAPIVersionNegotiation())
 	if err != nil {
 		return nil, fmt.Errorf("%w-%v", ErrCreateClient, err)
 	}
 	return &tool{
-		cli: cli,
+		cli:          cli,
+		osPlatform:   OSLinux,
+		archPlatform: ArchAMD64,
 	}, nil
 }

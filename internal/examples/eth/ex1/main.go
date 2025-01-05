@@ -29,10 +29,12 @@ import (
 	"github.com/paulwizviz/narwhal/eth"
 )
 
-// Example demonstrating operation to compile Solidity contract using "ethereum/solc" image.
+// This example demonstrates the steps involved in using `ethereum/solc`` container
+// to compile solidity contracts.
 
 func main() {
 
+	// STEP 1: Specify location of solidity file and compiled artefacts
 	pwd, err := os.Getwd()
 	if err != nil {
 		log.Fatal(err)
@@ -43,16 +45,17 @@ func main() {
 	outPath := filepath.Join(pwd, "tmp", "hello")
 	if _, err := os.Stat(outPath); errors.Is(err, os.ErrNotExist) {
 		if err := os.MkdirAll(outPath, 0755); err != nil {
-			log.Println("===>")
 			log.Fatal(err)
 		}
 	}
 
+	// STEP 3: Instantiate Etherreum tool
 	tool, err := eth.NewDefaultTool()
 	if err != nil {
 		log.Fatal(err)
 	}
 
+	// STEP 4: Exxecute function to compile solidity
 	containerID, err := tool.CompileSolWithOverride(context.Background(), "0.8.28", "solc_container", solPath, solFile, outPath, eth.EVMVerParis)
 	if err != nil {
 		log.Fatal(err)
@@ -60,6 +63,7 @@ func main() {
 
 	fmt.Println(containerID)
 
+	// STEP 5: Remove solidity compiler container
 	if err := tool.RemoveContainerForce(context.TODO(), containerID); err != nil {
 		log.Fatal(err)
 	}
