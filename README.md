@@ -12,9 +12,11 @@ The library provides high-level abstractions for container operations to perform
 
 ## Exported Packages
 
-* [eth](./eth/doc.go)
+* [eth](./eth/doc.go) - Ethereum related functions
     * [Example 1 - Compile solidity](./internal/examples/eth/ex1/main.go)
     * [Example 2 - Generate Go Binding](./internal/examples/eth/ex2/main.go)
+* [grpc](./grpc/doc.go) - GRPC related functions
+    * [Example 1 - Compile a single protobuf file](./internal/examples/grpc/ex1/main.go)
 
 ## Disclaimer
 
