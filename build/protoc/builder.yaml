@@ -1,0 +1,13 @@
+services:
+
+  protoc:
+    build:
+      context: ../../
+      platforms:
+        - "linux/amd64"
+      dockerfile: ./build/protoc/protoc.dockerfile
+      args:
+        UBUNTU_VER: 22.04
+        GO_VER: 1.21-bullseye
+        PROTOBUF_VERSION: 25.1
+    image: ${PROTOC_IMAGE_NAME}
