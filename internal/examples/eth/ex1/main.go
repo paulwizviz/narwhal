@@ -32,6 +32,10 @@ import (
 // This example demonstrates the steps involved in using `ethereum/solc`` container
 // to compile solidity contracts.
 
+// Prequisites:
+// * Ensure you have Docker Desktop is installed
+// * This example relies on /testdata/solidity/hello.sol
+
 func main() {
 
 	// STEP 1: Specify location of solidity file and compiled artefacts
@@ -49,14 +53,14 @@ func main() {
 		}
 	}
 
-	// STEP 3: Instantiate Etherreum tool
-	tool, err := eth.NewDefaultTool()
+	// STEP 3: Instantiate Etherreum solc
+	solc, err := eth.NewDefaultSolc("0.8.28")
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	// STEP 4: Exxecute function to compile solidity
-	containerID, err := tool.CompileSolWithOverride(context.Background(), "0.8.28", "solc_container", solPath, solFile, outPath, eth.EVMVerParis)
+	containerID, err := solc.CompileSolWithOverride(context.Background(), "solc_container", solPath, solFile, outPath, eth.EVMVerParis)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -64,7 +68,7 @@ func main() {
 	fmt.Println(containerID)
 
 	// STEP 5: Remove solidity compiler container
-	if err := tool.RemoveContainerForce(context.TODO(), containerID); err != nil {
+	if err := solc.RemoveContainerForce(context.TODO(), containerID); err != nil {
 		log.Fatal(err)
 	}
 

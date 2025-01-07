@@ -32,7 +32,9 @@ import (
 // This example demonstrates the steps involved in using `ethereum/solc`` container
 // to compile solidity contracts.
 //
-// Prequisites: Ensure that ABI and Bin files exists. If not run example 1.
+// Prequisites:
+// * Ensure you have Docker Desktop is installed
+// * Ensure that ABI and Bin files exists. If not run example 1.
 
 func main() {
 
@@ -57,14 +59,14 @@ func main() {
 	fmt.Println(abiPath)
 	fmt.Println(outPath)
 
-	// STEP 2: Instantiate an Ethereum tool
-	tool, err := eth.NewDefaultTool()
+	// STEP 2: Instantiate an Geth Tool
+	tool, err := eth.NewDefaultProtoc("alltools-stable")
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	// STEP 3: Generate Go binding
-	containerID, err := tool.GenGoBinding(context.Background(), "alltools-stable", "go-gen", abiPath, outPath, packageName, localType)
+	containerID, err := tool.GenGoBinding(context.Background(), "go-gen", abiPath, outPath, packageName, localType)
 	if err != nil {
 		log.Fatal(err)
 	}
