@@ -24,22 +24,12 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"path/filepath"
 
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/mount"
 	dockersdk "github.com/docker/docker/client"
 	v1 "github.com/opencontainers/image-spec/specs-go/v1"
-)
-
-const (
-	// OSLinux is the name of Docker's Linux platform
-	OSLinux = "linux"
-)
-
-const (
-	// ArchAMD64 is the name of Docker's architecture platform
-	ArchAMD64 = "amd64"
+	"github.com/paulwizviz/narwhal/shared"
 )
 
 var (
@@ -53,39 +43,48 @@ var (
 	ErrRemovingContainer = errors.New("unable to remove container")
 )
 
-type Tool interface {
+type Protoc interface {
 	// CompileProtosGo trigger protoc container to compile protofile
-	CompileProtosGo(ctx context.Context, image string, containerName string, protoPath string, outPath string, proto string) (string, error)
+	CompileProtosGo(ctx context.Context, containerName string, protoPath []string, outPath string, proto string) (string, error)
+	// CompileProtosGRPC trigger protoc container to compile protofile for grpc output
+	CompileProtosGRPC(ctx context.Context, containerName string, protoPath []string, outPath string, proto string) (string, error)
 	// RemoveContainer remove container for a given ID
 	RemoveContainer(ctx context.Context, containerID string) error
 	// RemoveContainerForce remove container for ID with no exception
 	RemoveContainerForce(ctx context.Context, containerID string) error
 }
 
-type tool struct {
+type protoc struct {
 	cli          *dockersdk.Client
 	osPlatform   string
 	archPlatform string
+	image        string
 }
 
-func (t tool) CompileProtosGo(ctx context.Context, image string, containerName string, protoPath string, outPath string, proto string) (string, error) {
-	return compileProtosGo(ctx, t.cli, image, containerName, t.osPlatform, t.archPlatform, protoPath, outPath, proto)
+func (p protoc) CompileProtosGo(ctx context.Context, containerName string, protoPaths []string, outPath string, proto string) (string, error) {
+	return compileProtosGo(ctx, p.cli, p.image, containerName, p.osPlatform, p.archPlatform, protoPaths, outPath, proto)
 }
 
-func compileProtosGo(ctx context.Context, client *dockersdk.Client, image string, name string, platformOS string, arch string, protoPath string, outPath string, proto string) (string, error) {
+func compileProtosGo(ctx context.Context, client *dockersdk.Client, image string, name string, platformOS string, arch string, protoPaths []string, outPath string, protoFile string) (string, error) {
 
 	platform := &v1.Platform{
 		OS:           platformOS,
 		Architecture: arch,
 	}
 
-	protofile := filepath.Join(protoPath, proto)
+	var localProtoPaths string
+	for _, pp := range protoPaths {
+		localProtoPaths = localProtoPaths + fmt.Sprintf("--proto_path=%s,", pp)
+	}
 
-	localProtosDir := "/opt/protos"
-	localProtos := fmt.Sprintf("%s/%s", localProtosDir, proto)
+	localProtoPaths = localProtoPaths[:len(localProtoPaths)-1]
 	localOutput := fmt.Sprintf("/opt/out")
 
-	cmd := []string{"--proto_path=/usr/local/include", fmt.Sprintf("--proto_path=%s", localProtosDir), fmt.Sprintf("--go_out=%s", localOutput), localProtos}
+	cmd := []string{"--proto_path=/usr/local/include", localProtoPaths,
+		fmt.Sprintf("--go_out=%s", localOutput),
+		"--go_opt=paths=source_relative",
+		protoFile}
+
 	containConfig := &container.Config{
 		Image: image,
 		Cmd:   cmd,
@@ -95,8 +94,8 @@ func compileProtosGo(ctx context.Context, client *dockersdk.Client, image string
 		Mounts: []mount.Mount{
 			{
 				Type:   mount.TypeBind,
-				Source: protofile,
-				Target: fmt.Sprintf("%s/%s", localProtosDir, proto),
+				Source: protoFile,
+				Target: protoFile,
 			},
 			{
 				Type:   mount.TypeBind,
@@ -126,28 +125,96 @@ func compileProtosGo(ctx context.Context, client *dockersdk.Client, image string
 	return resp.ID, nil
 }
 
-func (t tool) RemoveContainer(ctx context.Context, containerID string) error {
-	if err := t.cli.ContainerRemove(ctx, containerID, container.RemoveOptions{Force: false}); err != nil {
+func (p protoc) CompileProtosGRPC(ctx context.Context, containerName string, protoPaths []string, outPath string, proto string) (string, error) {
+	return compileProtosGRPC(ctx, p.cli, p.image, containerName, p.osPlatform, p.archPlatform, protoPaths, outPath, proto)
+}
+
+func compileProtosGRPC(ctx context.Context, client *dockersdk.Client, image string, name string, platformOS string, arch string, protoPaths []string, outPath string, protoFile string) (string, error) {
+
+	platform := &v1.Platform{
+		OS:           platformOS,
+		Architecture: arch,
+	}
+
+	var localProtoPaths string
+	for _, pp := range protoPaths {
+		localProtoPaths = localProtoPaths + fmt.Sprintf("--proto_path=%s,", pp)
+	}
+
+	localProtoPaths = localProtoPaths[:len(localProtoPaths)-1]
+	localOutput := fmt.Sprintf("/opt/out")
+
+	cmd := []string{"--proto_path=/usr/local/include", localProtoPaths,
+		fmt.Sprintf("--go_out=%s", localOutput),
+		"--go_opt=paths=source_relative",
+		fmt.Sprintf("--go-grpc_out=%s", localOutput),
+		"--go-grpc_opt=paths=source_relative",
+		protoFile}
+	containConfig := &container.Config{
+		Image: image,
+		Cmd:   cmd,
+	}
+
+	hostConfig := &container.HostConfig{
+		Mounts: []mount.Mount{
+			{
+				Type:   mount.TypeBind,
+				Source: protoFile,
+				Target: protoFile,
+			},
+			{
+				Type:   mount.TypeBind,
+				Source: outPath,
+				Target: localOutput,
+			},
+		},
+	}
+
+	resp, err := client.ContainerCreate(ctx, containConfig, hostConfig, nil, platform, name)
+	if err != nil {
+		return "", fmt.Errorf("%w-%v", ErrProtocCreateContainer, err)
+	}
+
+	if err := client.ContainerStart(ctx, resp.ID, container.StartOptions{}); err != nil {
+		return "", fmt.Errorf("%w-%v", ErrProtoStartContainer, err)
+	}
+
+	out, err := client.ContainerLogs(ctx, resp.ID, container.LogsOptions{ShowStdout: true, ShowStderr: true, Follow: true, Timestamps: true})
+	if err != nil {
+		return "", err
+	}
+	defer out.Close()
+
+	io.Copy(os.Stdout, out)
+
+	return resp.ID, nil
+}
+
+func (p protoc) RemoveContainer(ctx context.Context, containerID string) error {
+	if err := p.cli.ContainerRemove(ctx, containerID, container.RemoveOptions{Force: false}); err != nil {
 		return fmt.Errorf("%w-%v", ErrRemovingContainer, err)
 	}
 	return nil
 }
 
-func (t tool) RemoveContainerForce(ctx context.Context, containerID string) error {
-	if err := t.cli.ContainerRemove(ctx, containerID, container.RemoveOptions{Force: true}); err != nil {
+func (p protoc) RemoveContainerForce(ctx context.Context, containerID string) error {
+	if err := p.cli.ContainerRemove(ctx, containerID, container.RemoveOptions{Force: true}); err != nil {
 		return fmt.Errorf("%w-%v", ErrRemovingContainer, err)
 	}
 	return nil
 }
 
-func NewDefaultTool() (Tool, error) {
+// NewProtocWithLocalImageLinuxAMD64 instantiate a user specified image base on Linux and AMD64 platform
+func NewProtocWithLocalImageLinuxAMD64(img string) (Protoc, error) {
 	cli, err := dockersdk.NewClientWithOpts(dockersdk.FromEnv, dockersdk.WithAPIVersionNegotiation())
 	if err != nil {
 		return nil, fmt.Errorf("%w-%v", ErrCreateTool, err)
 	}
-	return &tool{
+	p := shared.PlatformLinuxAMD64()
+	return &protoc{
 		cli:          cli,
-		osPlatform:   OSLinux,
-		archPlatform: ArchAMD64,
+		osPlatform:   p.OS,
+		archPlatform: p.Arch,
+		image:        img,
 	}, nil
 }

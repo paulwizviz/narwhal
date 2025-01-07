@@ -39,7 +39,7 @@ func main() {
 
 	protoPath := filepath.Join(pwd, "testdata", "protos")
 	protoFile := filepath.Join(protoPath, "person.proto")
-	outPath := filepath.Join(pwd, "tmp", "go", "ex1")
+	outPath := filepath.Join(pwd, "tmp", "go", "ex2")
 	if _, err := os.Stat(outPath); errors.Is(err, os.ErrNotExist) {
 		if err := os.MkdirAll(outPath, 0755); err != nil {
 			log.Fatal(err)
@@ -54,7 +54,7 @@ func main() {
 	}
 
 	// STEP 4: Exxecute function to compile solidity
-	containerID, err := tool.CompileProtosGo(context.Background(), "grpc_container", []string{protoPath}, outPath, protoFile)
+	containerID, err := tool.CompileProtosGRPC(context.Background(), "grpc_container", []string{protoPath}, outPath, protoFile)
 	if err != nil {
 		log.Fatal(err)
 	}
