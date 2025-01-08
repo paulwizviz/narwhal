@@ -1,10 +1,10 @@
 # Overview
 
-`Narwhal` is an open-source Go module designed to help developers seamlessly integrate container technologies into their applications.
+`Narwhal` is an open-source Go module designed to help developers seamlessly integrate operations to trigger containers into their applications.
 
 ## Project Scope
 
-The library provides high-level abstractions for container operations to perform various tasks. For instance, using container-based artifacts to compile C source code and many other potential use cases.
+The library provides high-level abstractions of container operations to perform various tasks. For instance, using container-based artifacts to compile C source code and many other potential use cases.
 
 ## Audience
 
@@ -12,12 +12,8 @@ The library provides high-level abstractions for container operations to perform
 
 ## Exported Packages
 
-* [eth](./eth/doc.go) - Ethereum related functions
-    * [Example 1 - Compile solidity](./internal/examples/eth/ex1/main.go)
-    * [Example 2 - Generate Go Binding](./internal/examples/eth/ex2/main.go)
-* [grpc](./grpc/doc.go) - GRPC related functions
-    * [Example 1 - Compile Go binding only](./internal/examples/grpc/ex1/main.go)
-    * [Example 2 - Compile GRPC binding](./internal/examples/grpc/ex2/main.go)
+* [eth](./docs/eth.md)
+* [grpc](./docs/grpc.md)
 
 ## Disclaimer
 
