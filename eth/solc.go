@@ -81,7 +81,8 @@ var (
 // Solc represents docker clients that wrap solidity compiler
 type Solc interface {
 
-	// CompileSol is a function trigger a container to compile solidity
+	// CompileSol is a function trigger a container to compile solidity. It will return
+	// an error if any compiled artefacts already exist in the outPath
 	//
 	// Arguments:
 	//
@@ -91,7 +92,7 @@ type Solc interface {
 	//	- outPath         path to where the compiled artefact should be
 	//	- evmVer          version of EVM as per constant value
 	CompileSol(ctx context.Context, containerName string, solPath string, solFile string, outPath string, evmVer string) (string, error)
-	// CompileSolWithOverride is compile solidity and override existing compile versions
+	// CompileSolWithOverride is compile solidity and override any compiled artefacts in outPath
 	CompileSolWithOverride(ctx context.Context, containerName string, solPath string, solFile string, outPath string, evmVer string) (string, error)
 	// RemoveContainer remove container for a given ID
 	RemoveContainer(ctx context.Context, containerID string) error
