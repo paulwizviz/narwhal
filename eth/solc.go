@@ -63,17 +63,6 @@ const (
 )
 
 var (
-	// ErrSolcClient represents error creating a ethtool client
-	ErrSolcClient = errors.New("unable to create solc client")
-	// ErrSolcCreatContainer represent container creation error
-	ErrSolcCreatContainer = errors.New("unable to create solc container")
-	// ErrRemovingSolcContainer represents error removing container
-	ErrRemovingSolcContainer = errors.New("unable to remove container")
-	// ErrSolcStartContainer represent container starting error
-	ErrSolcStartContainer = errors.New("unable to start solc container")
-)
-
-var (
 	// ErrInvalidEVMVersion represent an invalid EVM version declared
 	ErrInvalidEVMVersion = errors.New("invalid evm version")
 )
@@ -158,16 +147,16 @@ func compileSol(ctx context.Context, client *dockersdk.Client, image string, nam
 
 	resp, err := client.ContainerCreate(ctx, containConfig, hostConfig, nil, platform, name)
 	if err != nil {
-		return "", fmt.Errorf("%w-%v", ErrSolcCreatContainer, err)
+		return "", shared.CreateContainerErr(err, "eth", "compileSol")
 	}
 
 	if err := client.ContainerStart(ctx, resp.ID, container.StartOptions{}); err != nil {
-		return "", fmt.Errorf("%w-%v", ErrSolcStartContainer, err)
+		return "", shared.StartContainerErr(err, "eth", "compileSol")
 	}
 
 	out, err := client.ContainerLogs(ctx, resp.ID, container.LogsOptions{ShowStdout: true, ShowStderr: true, Follow: true, Timestamps: true})
 	if err != nil {
-		return "", err
+		return "", shared.ContainerLogErr(err, "eth", "compileSol")
 	}
 	defer out.Close()
 
@@ -195,17 +184,11 @@ func isEVMVerCorrect(version string) bool {
 }
 
 func (s solc) RemoveContainer(ctx context.Context, containerID string) error {
-	if err := s.cli.ContainerRemove(ctx, containerID, container.RemoveOptions{Force: false}); err != nil {
-		return fmt.Errorf("%w-%v", ErrRemovingSolcContainer, err)
-	}
-	return nil
+	return shared.RemoveContainer(ctx, s.cli, containerID)
 }
 
-func (t solc) RemoveContainerForce(ctx context.Context, containerID string) error {
-	if err := t.cli.ContainerRemove(ctx, containerID, container.RemoveOptions{Force: true}); err != nil {
-		return fmt.Errorf("%w-%v", ErrRemovingSolcContainer, err)
-	}
-	return nil
+func (s solc) RemoveContainerForce(ctx context.Context, containerID string) error {
+	return shared.RemoveContainerForce(ctx, s.cli, containerID)
 }
 
 // NewDefaultSolc instantiate an ethereum/solc client for Linux/amd64 platform
@@ -216,7 +199,7 @@ func (t solc) RemoveContainerForce(ctx context.Context, containerID string) erro
 func NewDefaultSolc(imageTag string) (Solc, error) {
 	cli, err := dockersdk.NewClientWithOpts(dockersdk.FromEnv, dockersdk.WithAPIVersionNegotiation())
 	if err != nil {
-		return nil, fmt.Errorf("%w-%v", ErrSolcClient, err)
+		return nil, shared.InstantiateClientErr(err, "eth", "NewDefaultSolc")
 	}
 	solcImage := fmt.Sprintf("%s:%s", EthereumSolcImage, imageTag)
 
@@ -225,7 +208,7 @@ func NewDefaultSolc(imageTag string) (Solc, error) {
 		Platform: fmt.Sprintf("%s/%s", p.OS, p.Arch),
 	})
 	if err != nil {
-		return nil, err
+		return nil, shared.PullImageError(err, "eth", "NewDefaultSolc")
 	}
 	defer reader.Close()
 	io.Copy(os.Stdout, reader)

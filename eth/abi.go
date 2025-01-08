@@ -20,7 +20,6 @@ package eth
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -37,17 +36,6 @@ import (
 const (
 	// EthereumGethToolImage is the name of Geth tool Docker image
 	EthereumGethToolImage = "ethereum/client-go"
-)
-
-var (
-	// ErrCreateABIGenClient represents error creating protoc Docker client
-	ErrCreateABIGenClient = errors.New("unable to create docker abigen client")
-	// ErrCreateABIGenContainer represents error creating ABIGen container
-	ErrCreateABIGenContainer = errors.New("unable to create abigen container")
-	// ErrRemoveABIGenContainer represents error removing ABIGen container
-	ErrRemoveABIGenContainer = errors.New("unable to remove abigen container")
-	// ErrCreateABIGenContainer represents error staring ABIGen container
-	ErrStartABIGenContainer = errors.New("unable to start abigen container")
 )
 
 // ABIGen is an abstraction of Ethereum ABIGen docker client
@@ -108,16 +96,16 @@ func generateGoBinding(ctx context.Context, client *dockersdk.Client, image stri
 
 	resp, err := client.ContainerCreate(ctx, containConfig, hostConfig, nil, platform, name)
 	if err != nil {
-		return "", fmt.Errorf("%w-%v", ErrCreateABIGenContainer, err)
+		return "", shared.CreateContainerErr(err, "eth", "generateGoBinding")
 	}
 
 	if err := client.ContainerStart(ctx, resp.ID, container.StartOptions{}); err != nil {
-		return "", fmt.Errorf("%w-%v", ErrStartABIGenContainer, err)
+		return "", shared.StartContainerErr(err, "eth", "generateGoBinding")
 	}
 
 	out, err := client.ContainerLogs(ctx, resp.ID, container.LogsOptions{ShowStdout: true, ShowStderr: true, Follow: true, Timestamps: true})
 	if err != nil {
-		return "", err
+		return "", shared.ContainerLogErr(err, "eth", "generateGoBinding")
 	}
 	defer out.Close()
 
@@ -127,17 +115,11 @@ func generateGoBinding(ctx context.Context, client *dockersdk.Client, image stri
 }
 
 func (a abigen) RemoveContainer(ctx context.Context, containerID string) error {
-	if err := a.cli.ContainerRemove(ctx, containerID, container.RemoveOptions{Force: false}); err != nil {
-		return fmt.Errorf("%w-%v", ErrRemoveABIGenContainer, err)
-	}
-	return nil
+	return shared.RemoveContainer(ctx, a.cli, containerID)
 }
 
 func (a abigen) RemoveContainerForce(ctx context.Context, containerID string) error {
-	if err := a.cli.ContainerRemove(ctx, containerID, container.RemoveOptions{Force: true}); err != nil {
-		return fmt.Errorf("%w-%v", ErrRemoveABIGenContainer, err)
-	}
-	return nil
+	return shared.RemoveContainerForce(ctx, a.cli, containerID)
 }
 
 // NewDefaultProtoc instantiate an ethereum/client-go client for Linux/amd64 platform
@@ -149,7 +131,7 @@ func NewDefaultProtoc(imgTag string) (ABIGen, error) {
 
 	cli, err := dockersdk.NewClientWithOpts(dockersdk.FromEnv, dockersdk.WithAPIVersionNegotiation())
 	if err != nil {
-		return nil, fmt.Errorf("%w-%v", ErrCreateABIGenClient, err)
+		return nil, shared.InstantiateClientErr(err, "eth", "NewDefaultProtoc")
 	}
 	gethToolImage := fmt.Sprintf("%s:%s", EthereumGethToolImage, imgTag)
 
@@ -158,7 +140,7 @@ func NewDefaultProtoc(imgTag string) (ABIGen, error) {
 		Platform: fmt.Sprintf("%s/%s", p.OS, p.Arch),
 	})
 	if err != nil {
-		return nil, err
+		return nil, shared.PullImageError(err, "eth", "NewDefaultProtoc")
 	}
 	defer reader.Close()
 	io.Copy(os.Stdout, reader)
