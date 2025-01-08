@@ -26,55 +26,44 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/paulwizviz/narwhal/eth"
+	"github.com/paulwizviz/narwhal/grpc"
 )
-
-// This example demonstrates the steps involved in using `ethereum/solc`` container
-// to compile solidity contracts.
-//
-// Prequisites:
-// * Ensure you have Docker Desktop is installed
-// * Ensure that ABI and Bin files exists. If not run example 1.
 
 func main() {
 
-	// STEP 1: Specify the location of ABI, Binary files and location of
-	// generated Go binding
+	// STEP 1: Specify location of protos file and compiled artefacts
 	pwd, err := os.Getwd()
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	packageName := "hello"
-	localType := "HelloWorld"
-
-	abiPath := filepath.Join(pwd, "tmp", packageName)
-	outPath := filepath.Join(pwd, "tmp", "internal", packageName)
+	protoPath := filepath.Join(pwd, "testdata", "protos")
+	protoFile := filepath.Join(protoPath, "person.proto")
+	outPath := filepath.Join(pwd, "tmp", "go", "ex2")
 	if _, err := os.Stat(outPath); errors.Is(err, os.ErrNotExist) {
 		if err := os.MkdirAll(outPath, 0755); err != nil {
 			log.Fatal(err)
 		}
 	}
 
-	fmt.Println(abiPath)
-	fmt.Println(outPath)
-
-	// STEP 2: Instantiate an Geth Tool
-	tool, err := eth.NewDefaultProtoc("alltools-stable")
+	// STEP 3: Instantiate Etherreum tool
+	// NOTE: In this case we have a custom build image
+	tool, err := grpc.NewProtocWithLocalImageLinuxAMD64("narwhal/protoc:current")
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	// STEP 3: Generate Go binding
-	containerID, err := tool.GenGoBinding(context.Background(), "go-gen", abiPath, outPath, packageName, localType)
+	// STEP 4: Exxecute function to compile solidity
+	containerID, err := tool.CompileProtosGRPC(context.Background(), "grpc_container", []string{protoPath}, outPath, protoFile)
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	fmt.Println(containerID)
 
-	// STEP 4: Remover ABI generator container
+	// STEP 5: Remove solidity compiler container
 	if err := tool.RemoveContainerForce(context.TODO(), containerID); err != nil {
 		log.Fatal(err)
 	}
+
 }

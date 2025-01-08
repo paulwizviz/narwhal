@@ -38,8 +38,8 @@ func main() {
 	}
 
 	protoPath := filepath.Join(pwd, "testdata", "protos")
-	protoFile := "person.proto"
-	outPath := filepath.Join(pwd, "tmp", "go", "pkg")
+	protoFile := filepath.Join(protoPath, "person.proto")
+	outPath := filepath.Join(pwd, "tmp", "go", "ex1")
 	if _, err := os.Stat(outPath); errors.Is(err, os.ErrNotExist) {
 		if err := os.MkdirAll(outPath, 0755); err != nil {
 			log.Fatal(err)
@@ -47,13 +47,14 @@ func main() {
 	}
 
 	// STEP 3: Instantiate Etherreum tool
-	tool, err := grpc.NewDefaultTool()
+	// NOTE: In this case we have a custom build image
+	tool, err := grpc.NewProtocWithLocalImageLinuxAMD64("narwhal/protoc:current")
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	// STEP 4: Exxecute function to compile solidity
-	containerID, err := tool.CompileProtosGo(context.Background(), "narwhal/protoc:current", "grpc_container", protoPath, outPath, protoFile)
+	containerID, err := tool.CompileProtosGo(context.Background(), "grpc_container", []string{protoPath}, outPath, protoFile)
 	if err != nil {
 		log.Fatal(err)
 	}
