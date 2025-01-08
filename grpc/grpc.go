@@ -20,7 +20,6 @@ package grpc
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -30,17 +29,6 @@ import (
 	dockersdk "github.com/docker/docker/client"
 	v1 "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/paulwizviz/narwhal/shared"
-)
-
-var (
-	// ErrCreateTool represents error to create tool
-	ErrCreateTool = errors.New("unable to instantiate tool")
-	// ErrProtocCreateContainer represents error to create protoc container
-	ErrProtocCreateContainer = errors.New("unable to create protoc container")
-	// ErrProtoStartContainer represents error to start the ontainer
-	ErrProtoStartContainer = errors.New("unable to start protoc container")
-	// ErrRemovingContainer represents error to remove protoc container
-	ErrRemovingContainer = errors.New("unable to remove container")
 )
 
 type Protoc interface {
@@ -107,16 +95,16 @@ func compileProtosGo(ctx context.Context, client *dockersdk.Client, image string
 
 	resp, err := client.ContainerCreate(ctx, containConfig, hostConfig, nil, platform, name)
 	if err != nil {
-		return "", fmt.Errorf("%w-%v", ErrProtocCreateContainer, err)
+		return "", shared.CreateContainerErr(err, "grpc", "compileProtosGo")
 	}
 
 	if err := client.ContainerStart(ctx, resp.ID, container.StartOptions{}); err != nil {
-		return "", fmt.Errorf("%w-%v", ErrProtoStartContainer, err)
+		return "", shared.StartContainerErr(err, "grpc", "compileProtosGo")
 	}
 
 	out, err := client.ContainerLogs(ctx, resp.ID, container.LogsOptions{ShowStdout: true, ShowStderr: true, Follow: true, Timestamps: true})
 	if err != nil {
-		return "", err
+		return "", shared.ContainerLogErr(err, "grpc", "compileProtosGo")
 	}
 	defer out.Close()
 
@@ -172,16 +160,16 @@ func compileProtosGRPC(ctx context.Context, client *dockersdk.Client, image stri
 
 	resp, err := client.ContainerCreate(ctx, containConfig, hostConfig, nil, platform, name)
 	if err != nil {
-		return "", fmt.Errorf("%w-%v", ErrProtocCreateContainer, err)
+		return "", shared.CreateContainerErr(err, "grpc", "compileProtosGRPC")
 	}
 
 	if err := client.ContainerStart(ctx, resp.ID, container.StartOptions{}); err != nil {
-		return "", fmt.Errorf("%w-%v", ErrProtoStartContainer, err)
+		return "", shared.StartContainerErr(err, "grpc", "compileProtosGRPC")
 	}
 
 	out, err := client.ContainerLogs(ctx, resp.ID, container.LogsOptions{ShowStdout: true, ShowStderr: true, Follow: true, Timestamps: true})
 	if err != nil {
-		return "", err
+		return "", shared.ContainerLogErr(err, "grpc", "compileProtosGRPC")
 	}
 	defer out.Close()
 
@@ -191,24 +179,18 @@ func compileProtosGRPC(ctx context.Context, client *dockersdk.Client, image stri
 }
 
 func (p protoc) RemoveContainer(ctx context.Context, containerID string) error {
-	if err := p.cli.ContainerRemove(ctx, containerID, container.RemoveOptions{Force: false}); err != nil {
-		return fmt.Errorf("%w-%v", ErrRemovingContainer, err)
-	}
-	return nil
+	return shared.RemoveContainer(ctx, p.cli, containerID)
 }
 
 func (p protoc) RemoveContainerForce(ctx context.Context, containerID string) error {
-	if err := p.cli.ContainerRemove(ctx, containerID, container.RemoveOptions{Force: true}); err != nil {
-		return fmt.Errorf("%w-%v", ErrRemovingContainer, err)
-	}
-	return nil
+	return shared.RemoveContainerForce(ctx, p.cli, containerID)
 }
 
 // NewProtocWithLocalImageLinuxAMD64 instantiate a user specified image base on Linux and AMD64 platform
 func NewProtocWithLocalImageLinuxAMD64(img string) (Protoc, error) {
 	cli, err := dockersdk.NewClientWithOpts(dockersdk.FromEnv, dockersdk.WithAPIVersionNegotiation())
 	if err != nil {
-		return nil, fmt.Errorf("%w-%v", ErrCreateTool, err)
+		return nil, shared.InstantiateClientErr(err, "grpc", "NewProtocWithLocalImageLinuxAMD64")
 	}
 	p := shared.PlatformLinuxAMD64()
 	return &protoc{
