@@ -214,7 +214,10 @@ func NewDefaultSolc(imageTag string) (Solc, error) {
 		return nil, shared.PullImageError(err, "eth", "NewDefaultSolc")
 	}
 	defer reader.Close()
-	io.Copy(os.Stdout, reader)
+	_, err = io.Copy(os.Stdout, reader)
+	if err != nil {
+		return nil, err
+	}
 	return &solc{
 		cli:          cli,
 		osPlatform:   p.OS,
