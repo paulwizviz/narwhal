@@ -20,7 +20,7 @@ if err != nil {
 }
 ```
 
-Refer to [Example 1](../internal/examples/grpc/ex1/main.go) for a working version that incorporate these functions in an application.
+Refer to [Example 1](../examples/grpc/ex1/main.go) for a working version that incorporate these functions in an application.
 
 The following code snippet demonstrates the core functions using `protoc` to generate GRPC services in Go binding.
 
