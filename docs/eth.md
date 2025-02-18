@@ -31,7 +31,7 @@ if err != nil {
 }
 ```
 
-Refer to [Example 1](../internal/examples/eth/ex1/main.go) for a working version incorporated as part of an application.
+Refer to [Example 1](../examples/eth/ex1/main.go) for a working version incorporated as part of an application.
 
 ## ABI Gen -- Go binding generator
 
@@ -52,4 +52,4 @@ if err != nil {
 }
 ```
 
-Refer to [Example 2](../internal/examples/eth/ex2/main.go) for a working version incorporated as part of an application.
+Refer to [Example 2](../examples/eth/ex2/main.go) for a working version incorporated as part of an application.

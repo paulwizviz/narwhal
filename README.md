@@ -1,6 +1,6 @@
-# Overview
+# Narwhal: An Open-Source Go Library
 
-`Narwhal` is an open-source Go module designed to help developers seamlessly integrate operations to trigger containers into their applications.
+`Narwhal` is an open-source Go module designed to help developers seamlessly integrate operations in their applications to trigger containers.
 
 ## Project Scope
 
