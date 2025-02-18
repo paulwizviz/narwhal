@@ -66,7 +66,7 @@ func compileProtosGo(ctx context.Context, client *dockersdk.Client, image string
 	}
 
 	localProtoPaths = localProtoPaths[:len(localProtoPaths)-1]
-	localOutput := fmt.Sprintf("/opt/out")
+	localOutput := "/opt/out"
 
 	cmd := []string{"--proto_path=/usr/local/include", localProtoPaths,
 		fmt.Sprintf("--go_out=%s", localOutput),
@@ -133,7 +133,7 @@ func compileProtosGRPC(ctx context.Context, client *dockersdk.Client, image stri
 	}
 
 	localProtoPaths = localProtoPaths[:len(localProtoPaths)-1]
-	localOutput := fmt.Sprintf("/opt/out")
+	localOutput := "/opt/out"
 
 	cmd := []string{"--proto_path=/usr/local/include", localProtoPaths,
 		fmt.Sprintf("--go_out=%s", localOutput),
